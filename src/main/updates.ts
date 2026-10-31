@@ -2,8 +2,8 @@
 // with the answer cached in the settings file. Nothing is downloaded: the app links to the release page.
 import type { UpdateInfo } from '@shared/api'
 
-const URL_LATEST = 'https://api.github.com/repos/wingedpanther/cleanmytv/releases/latest'
-const RELEASES = 'https://github.com/wingedpanther/cleanmytv/releases/'
+const URL_LATEST = 'https://api.github.com/repos/hitttmannn/cleanmytv-linux/releases/latest'
+const RELEASES = 'https://github.com/hitttmannn/cleanmytv-linux/releases/'
 const EVERY_MS = 12 * 60 * 60 * 1000
 
 export interface UpdateCache {
@@ -11,17 +11,17 @@ export interface UpdateCache {
   latest?: string
 }
 
-/** Parses "v1.2.3" or "1.2.3"; null for anything else. */
+/** Parses "v1.2.3" , "1.2.3" or "1.2.3-mint.1"; null for anything else. */
 export function parseVersion(v: string): number[] | null {
-  const m = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(v.trim())
-  return m ? m.slice(1).map(Number) : null
+  const m = /^v?(\d+)\.(\d+)\.(\d+)(?:-mint\.(\d+))?$/.exec(v.trim())
+  return m ? m.slice(1).map(n => Number(n ?? 0)) : null
 }
 
 export function isNewer(candidate: string, current: string): boolean {
   const a = parseVersion(candidate)
   const b = parseVersion(current)
   if (!a || !b) return false
-  for (let i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i]
+  for (let i = 0; i < 4; i++) if (a[i] !== b[i]) return a[i] > b[i]
   return false
 }
 

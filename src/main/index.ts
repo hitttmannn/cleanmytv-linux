@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, session, shell, dialog } from 'electron'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -16,6 +16,8 @@ import { check as checkUpdate, type UpdateCache } from './updates'
 import { autoConnect, forgetTv, listTvs, rememberTv, setThumb } from './tvlist'
 import * as web from './web'
 import * as home from './home'
+import { installApk, readApk } from './apk'
+import { createHash } from 'node:crypto'
 import type { CheckItem, ConnStatus, CytvApi, KnownTv } from '@shared/api'
 
 let win: BrowserWindow | null = null
@@ -76,6 +78,22 @@ async function checks(): Promise<CheckItem[]> {
 type Handlers = { [K in keyof CytvApi as CytvApi[K] extends (...a: never[]) => Promise<unknown> ? K : never]: CytvApi[K] }
 
 const handlers: Omit<Handlers, 'onLog' | 'onProgress' | 'onStatus'> = {
+  installLocalApk: async () => {
+    if (!win || T.getStatus().state !== 'connected') throw new Error('Connect to a TV first.')
+    const target = T.getStatus().host
+    const pick = await dialog.showOpenDialog(win, { title: 'Select a trusted APK (for example FLauncher)', properties: ['openFile'], filters: [{ name: 'Android APK', extensions: ['apk'] }] })
+    if (pick.canceled || !pick.filePaths[0]) return { ok: false, summary: 'Installation cancelled.', warnings: [] }
+    const apk = readApk(pick.filePaths[0])
+    const sha = createHash('sha256').update(apk).digest('hex')
+    const answer = await dialog.showMessageBox(win, {
+      type: 'question', buttons: ['Cancel', 'Install APK'], defaultId: 0, cancelId: 0,
+      title: 'Install APK only', message: `Install on ${target}?`,
+      detail: `${pick.filePaths[0]}\nSHA-256: ${sha}\nOnly install APKs from a source you trust. Existing app data is kept on update. The stock launcher stays enabled; this does not change the default Home app.`
+    })
+    if (answer.response !== 1) return { ok: false, summary: 'Installation cancelled.', warnings: [] }
+    if (T.getStatus().state !== 'connected' || T.getStatus().host !== target) throw new Error('The TV connection changed. Select the APK again.')
+    return installApk(apk)
+  },
   scan: () => scan(),
   connect: async (host) => {
     const s = await T.connect(host)
@@ -175,7 +193,7 @@ function createWindow(): void {
     height: 820,
     minWidth: 960,
     minHeight: 640,
-    title: 'CleanMyTV',
+    title: 'CleanMyTV Linux — Ubuntu / Linux Mint',
     backgroundColor: '#FFFFFF',
     show: false,
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: false }

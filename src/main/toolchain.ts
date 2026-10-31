@@ -39,7 +39,8 @@ export function javaHome(): string | null {
 
 export const sdkReady = (): boolean => existsSync(join(dirs.sdk, 'platforms', 'android-34')) && existsSync(join(dirs.sdk, 'build-tools', '34.0.0'))
 /** Ready only when it is the pinned commit; a source folder from an older or unpinned download is fetched again. */
-export const adbPath = (): string => join(dirs.platformTools, exe('adb'))
+export const adbPath = (): string => process.platform === 'linux' && existsSync('/usr/bin/adb')
+  ? '/usr/bin/adb' : join(dirs.platformTools, exe('adb'))
 export const platformToolsReady = (): boolean => existsSync(adbPath())
 
 export function run(task: string, cmd: string, args: string[], opts: { cwd?: string; env?: NodeJS.ProcessEnv; input?: string; quiet?: boolean; redact?: string[] } = {}): Promise<{ code: number; out: string }> {
