@@ -168,7 +168,7 @@ export function installMock(): void {
       return { closed: true, message: `${host}:5555 is closed: the TV refused the connection.` }
     },
     async checkUpdate() {
-      return { current: '0.2.1', latest: '0.3.0', available: true, url: 'https://github.com/wingedpanther/cleanmytv/releases/tag/v0.3.0' }
+      return { current: '0.2.1', latest: '0.3.0', available: true, url: 'https://github.com/hitttmannn/cleanmytv-linux/releases/tag/v0.3.0' }
     },
     async bootCheck() {
       await wait(2500)
@@ -264,6 +264,7 @@ export function installMock(): void {
       launcherInstalled = false
       return ok('The CleanYourTV launcher is removed from the TV.')
     },
+    async installLocalApk() { return { ok: true, summary: 'Preview: APK installed; Home unchanged.', warnings: [] } },
     async installHome() {
       for (const text of ['pm install -r /data/local/tmp/cmtv-home.apk', 'am start -W -n io.github.wingedpanther.cleanmytv.home/.MainActivity']) {
         log('install', 'cmd', text)
