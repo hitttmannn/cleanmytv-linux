@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -79,5 +79,16 @@ describe('SberBox with fake ADB', () => {
     const d = await measure()
     expect(d.memory).toBeUndefined(); expect(d.load).toBeUndefined()
     expect(d.data).toContain('/data'); expect(d.warnings.join(' ')).toMatch(/unavailable/)
+  })
+  it('refuses a damaged restore record before sending a package command', async () => {
+    const file = (await D.plan('sberbox-original')).record!.path
+    const original = readFileSync(file, 'utf8')
+    const j = JSON.parse(original)
+    j.operations[0].changed.push('ru.sberdevices.starlauncher')
+    writeFileSync(file, JSON.stringify(j))
+    const before = tv.commands.length
+    await expect(D.restore('sberbox-original')).rejects.toThrow(/damaged/)
+    expect(tv.commands.length).toBe(before)
+    writeFileSync(file, original)
   })
 })
