@@ -13,6 +13,8 @@ export interface Probe {
   release: string
   sdk: number
   build: string
+  /** Device serial, when Android exposes it to ADB. */
+  serial?: string
   /** "0" means port 5555 accepts any device on the network without the Allow prompt. */
   adbSecure: string
 }
@@ -62,6 +64,11 @@ export interface DebloatListSummary {
 
 export interface DebloatEntry {
   pkg: string
+  name?: string
+  purpose?: string
+  consequence?: string
+  risk?: 'medium' | 'high'
+  group?: string
   /** The list's inline comment for this package. */
   note: string
   /** In the list as an active line (true) or commented out by the author (false). */
@@ -110,6 +117,20 @@ export interface ApplyResult {
   warnings: string[]
   /** The stock launcher couldn't be found: the apps that can be Home, for the owner to pick from. */
   stockChoices?: string[]
+}
+
+export interface Diagnostics {
+  at: string
+  model: string
+  android: string
+  build: string
+  platform: string
+  memory?: { totalMiB: number; availableMiB: number; freeMiB: number; swapMiB: number }
+  load?: [number, number, number]
+  cpuPercent?: number
+  processes?: string[]
+  data?: string
+  warnings: string[]
 }
 
 /** CleanMyTV Home on the TV. */
@@ -330,6 +351,7 @@ export interface CytvApi {
   tvPackages(): Promise<DebloatEntry[]>
   applyDebloat(req: DebloatApplyRequest): Promise<ApplyResult>
   restore(listId: string): Promise<ApplyResult>
+  diagnostics(): Promise<Diagnostics>
 
   /** Install a local APK selected and confirmed in a native dialog, without launcher handover. */
   installLocalApk(): Promise<ApplyResult>

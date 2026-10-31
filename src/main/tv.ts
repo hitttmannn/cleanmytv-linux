@@ -100,7 +100,7 @@ export function host(): string {
 
 async function readProbe(c: AdbClient, h: string): Promise<Probe> {
   const keys = ['ro.product.model', 'ro.product.device', 'ro.product.name', 'ro.product.manufacturer',
-    'ro.build.version.release', 'ro.build.version.sdk', 'ro.build.display.id', 'ro.adb.secure']
+    'ro.build.version.release', 'ro.build.version.sdk', 'ro.build.display.id', 'ro.adb.secure', 'ro.serialno']
   // One shell call, one line per property, so a slow TV answers in one round trip.
   const out = await c.shell(keys.map((k) => `getprop ${k}`).join('; '))
   const v = out.split('\n').map((l) => l.trim())
@@ -113,7 +113,8 @@ async function readProbe(c: AdbClient, h: string): Promise<Probe> {
     release: v[4] ?? '',
     sdk: Number(v[5]) || 0,
     build: v[6] ?? '',
-    adbSecure: v[7] ?? ''
+    adbSecure: v[7] ?? '',
+    serial: v[8] && v[8] !== 'unknown' ? v[8] : undefined
   }
 }
 

@@ -17,6 +17,8 @@ import { autoConnect, forgetTv, listTvs, rememberTv, setThumb } from './tvlist'
 import * as web from './web'
 import * as home from './home'
 import { installApk, readApk } from './apk'
+import { measure as diagnostics } from './diagnostics'
+import { classify } from './staros'
 import { createHash } from 'node:crypto'
 import type { CheckItem, ConnStatus, CytvApi, KnownTv } from '@shared/api'
 
@@ -148,6 +150,7 @@ const handlers: Omit<Handlers, 'onLog' | 'onProgress' | 'onStatus'> = {
   tvPackages: () => debloat.tvPackages(),
   applyDebloat: (req) => debloat.apply(req),
   restore: (id) => debloat.restore(id),
+  diagnostics,
   useStockLauncher: () => launcher.useStock(),
   removeOldLauncher: () => launcher.removeOld(),
   homeStatus: () => home.status(),
@@ -194,6 +197,7 @@ function createWindow(): void {
     minWidth: 960,
     minHeight: 640,
     title: 'CleanMyTV Linux — Ubuntu / Linux Mint',
+    icon: app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(app.getAppPath(), 'build/icon.png'),
     backgroundColor: '#FFFFFF',
     show: false,
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: false }
@@ -230,6 +234,12 @@ app.whenReady().then(() => {
     ipcMain.handle(name, async (e, ...args: unknown[]) => {
       if (!isAppUrl(e.senderFrame?.url)) throw new Error('blocked: this request did not come from the app window')
       try {
+        const probe = T.getStatus().probe
+        if (probe && classify(probe) !== 'other') {
+          const safe = new Set(['scan', 'connect', 'disconnect', 'status', 'lastHost', 'reconnect', 'checkAdbClosed', 'checkUpdate', 'checks', 'knownTvs', 'connectKnown', 'forgetTv', 'diagnostics', 'lists', 'plan', 'tvPackages', 'applyDebloat', 'restore'])
+          if (classify(probe) === 'sberbox-original') safe.add('installLocalApk')
+          if (!safe.has(name)) throw new Error('This StarOS device supports diagnostics and selective cleanup only.')
+        }
         return await (fn as (...a: unknown[]) => Promise<unknown>)(...args)
       } catch (e) {
         send('log', { task: name, level: 'error', text: (e as Error).message, time: Date.now() })

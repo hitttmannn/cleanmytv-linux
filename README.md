@@ -1,6 +1,6 @@
 # CleanMyTV Linux
 
-A free desktop app **only for Ubuntu and Linux Mint, amd64** that manages Android TV and Google TV over Wi-Fi. This Linux fork adds a `.deb` package, system ADB support for Wireless debugging pairing, and installation of trusted local APKs such as FLauncher without automatically disabling Google TV's launcher.
+A free desktop app **only for Ubuntu and Linux Mint, amd64** that manages Android TV, Google TV and supported SberBox devices over Wi-Fi. This Linux fork adds a `.deb` package, system ADB support for Wireless debugging pairing, and installation of trusted local APKs such as FLauncher without automatically disabling the stock launcher.
 
 Based on [CleanMyTV by wingedpanther](https://github.com/wingedpanther/cleanmytv), under the MIT licence. The Android launcher remains CleanMyTV Home. Desktop builds for other operating systems are outside this fork's scope.
 
@@ -27,7 +27,7 @@ Download the amd64 `.deb` from [this fork's Releases](https://github.com/hitttma
 Targets: **Ubuntu 24.04 and Linux Mint 22.x (amd64)**. Locally tested on **Linux Mint 22.3**; Ubuntu is the packaging target and is not a separate completed hardware test.
 
 ```sh
-sudo apt install ./CleanMyTV-0.3.1-mint.1-amd64.deb
+sudo apt install ./CleanMyTV-0.3.2-mint.1-amd64.deb
 ```
 
 Open **CleanMyTV Linux** from the applications menu, or run `cleanmytv`. APT installs the required libraries, `adb` and `unzip`; Node.js and the Android SDK are not needed to run the installed app. The app never requests `--no-sandbox`.
@@ -41,6 +41,20 @@ Open **CleanMyTV Linux** from the applications menu, or run `cleanmytv`. APT ins
 This path uses ADB upload and `pm install -r` only. It does not disable the stock launcher, set the default Home app, grant permissions, uninstall an existing app or allow a downgrade. Android checks the APK and update signature. Split APK bundles are not supported. Choose a default Home app separately on the TV if desired; Android may show its own chooser after a new launcher is installed.
 
 **Clean & launch** and the separate **CleanMyTV Home → Install and use** still follow upstream's handover procedure and can disable Google's launcher. Use **Install local APK…** for installation only. Review cleanup selections before applying them.
+
+### SberBox / StarOS
+
+Connect an original SberBox through **Setup** using the device address shown on your network; ADB must already be enabled on the box. The app recognizes `ro.product.device=sberbox`, model `SberBox`, manufacturer `SberDevices` and Android 13 together. Other Sber/StarOS models show a warning and offer diagnostics only. [Sber's ADB instructions](https://developers.sber.ru/docs/ru/va/native/testing/adb) describe enabling and connecting ADB on compatible firmware.
+
+**Clean up → Компоненты SberBox** lists only the known profile candidates installed on this device. Nothing is selected by default. ES File Explorer and APKPure are third-party candidates; seven Sber components are optional and their dependencies are unverified. Check each app's role before selecting it. The preview and confirmation name every selected app. The backend protects the Sber launcher, settings, core services, Android System UI and Bluetooth, including against manual package input. Unknown StarOS system packages are protected as well.
+
+Before the first `pm disable-user --user 0` command, CleanMyTV saves the installed and previously disabled package lists, device identity and timestamp in `~/.cleanyourtv/`. It records each successful change separately. **Restore** enables only packages CleanMyTV disabled while they were enabled immediately before that operation. Previously disabled apps stay disabled. Each ADB failure is shown beside its package. Existing Android TV / Google TV restore records continue to use their original format.
+
+**Диагностика** is available on Android TV, Google TV and StarOS. It shows Android/build, hardware, RAM total, `MemAvailable`, `MemFree`, swap, CPU usage, 1/5/15-minute load averages, active processes and `/data` usage. Run it again after cleanup to compare. Load average is a task count, not a CPU percentage; `MemFree` is not the same as available memory. Unreadable `/proc` fields are reported while the rest remains visible.
+
+For FLauncher on SberBox, choose **Установить локальный APK** in the SberBox cleanup screen. It uses the existing confirmed local APK installation path and leaves `ru.sberdevices.starlauncher` enabled. Whether FLauncher launches and whether your StarOS firmware allows choosing it as HOME still needs a check on the physical box. [Sber documents third-party APK installation](https://sberdevices.ru/press/detail/masstabnoe_obnovlenie_sberbox_ustanovka_storonnix_prilozenii_i_100_kanalov_besplatno/), but that does not establish FLauncher compatibility or HOME selection.
+
+On the reported test device, ES File Explorer reached 108% of one CPU core before it was stopped; load average was 2.52 / 4.78 / 3.39, RAM 1991 MiB, swap 0 MiB, and MemAvailable around 749 MiB afterward. These are diagnostic examples, not promised speed gains. Automatic tests use a simulated device and do not change a real SberBox.
 
 ## Before you start: on the TV
 
