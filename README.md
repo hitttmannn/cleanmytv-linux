@@ -1,8 +1,8 @@
-# CleanMyTV
+# CleanMyTV Linux
 
-A free Mac and Windows app that cleans up your Android TV over Wi-Fi. It switches off the preinstalled
-bloat and puts in CleanMyTV Home, an ad-free home screen you set up from your computer. You don't need
-Python, Java, Android Studio or `adb`.
+A free desktop app **only for Ubuntu and Linux Mint, amd64** that manages Android TV and Google TV over Wi-Fi. This Linux fork adds a `.deb` package, system ADB support for Wireless debugging pairing, and installation of trusted local APKs such as FLauncher without automatically disabling Google TV's launcher.
+
+Based on [CleanMyTV by wingedpanther](https://github.com/wingedpanther/cleanmytv), under the MIT licence. The Android launcher remains CleanMyTV Home. Desktop builds for other operating systems are outside this fork's scope.
 
 The per-TV cleanup lists come from [cleanyourtv](https://github.com/Gathin23/cleanyourtv) by
 [@gathint](https://x.com/gathint). Thanks, Gathin.
@@ -12,7 +12,7 @@ rollback and troubleshooting, and the **[known-devices table](docs/KNOWN-DEVICES
 bundled lists cover per model. This README is the technical overview.
 
 Questions, help and home-screen setups: join the **[CleanMyTV Discord](https://discord.gg/6hZeQkDYf9)**.
-Bugs and feature requests go to [GitHub issues](https://github.com/wingedpanther/cleanmytv/issues).
+Bugs and feature requests go to [GitHub issues](https://github.com/hitttmannn/cleanmytv-linux/issues).
 
 
 
@@ -22,34 +22,25 @@ https://github.com/user-attachments/assets/4e3eb18a-d196-4a51-8d0e-93ce98e11913
 
 ## Download and install
 
-Get the latest version from [Releases](https://github.com/wingedpanther/cleanmytv/releases):
+Download the amd64 `.deb` from [this fork's Releases](https://github.com/hitttmannn/cleanmytv-linux/releases).
 
-| Computer | File |
-|---|---|
-| Mac with Apple silicon (M1 and later) | `CleanMyTV-<version>-arm64.dmg` |
-| Mac with Intel | `CleanMyTV-<version>.dmg` |
-| Windows 10 or 11 | `CleanMyTV-Setup-<version>.exe` |
+Targets: **Ubuntu 24.04 and Linux Mint 22.x (amd64)**. Locally tested on **Linux Mint 22.3**; Ubuntu is the packaging target and is not a separate completed hardware test.
 
-Macs need macOS 13 Ventura or newer. The app asks GitHub for a newer version at most twice a day and
-links to it in the sidebar; it never downloads anything by itself.
+```sh
+sudo apt install ./CleanMyTV-0.3.1-mint.1-amd64.deb
+```
 
-The installers are not signed with a paid developer certificate, so your computer warns you the first
-time:
+Open **CleanMyTV Linux** from the applications menu, or run `cleanmytv`. APT installs the required libraries, `adb` and `unzip`; Node.js and the Android SDK are not needed to run the installed app. The app never requests `--no-sandbox`.
 
-- **Mac:** open the dmg and drag CleanMyTV to Applications, then open it. When macOS says it can't
-  verify the developer, choose **Done**, go to System Settings → Privacy & Security and press
-  **Open Anyway** next to CleanMyTV (on macOS 14 and earlier, right-click the app and choose **Open**
-  instead). macOS asks whether CleanMyTV may find devices on your local network: choose **Allow**, or
-  it cannot reach the TV.
+### Install FLauncher while keeping Google TV
 
-  If macOS says CleanMyTV **is damaged and can't be opened**, you have v0.1.0, whose Mac build was
-  not signed correctly. Run this in Terminal, then open the app again:
+1. Download a trusted APK from the [official FLauncher project](https://gitlab.com/flauncher/flauncher).
+2. Connect to the TV in **Setup**, then open **Home screen → Install local APK…**.
+3. Check the file, TV address and SHA-256 in the native confirmation dialog, then install.
 
-  ```bash
-  xattr -cr /Applications/CleanMyTV.app
-  codesign --force --deep --sign - /Applications/CleanMyTV.app
-  ```
-- **Windows:** when SmartScreen says it protected your PC, choose **More info**, then **Run anyway**.
+This path uses ADB upload and `pm install -r` only. It does not disable the stock launcher, set the default Home app, grant permissions, uninstall an existing app or allow a downgrade. Android checks the APK and update signature. Split APK bundles are not supported. Choose a default Home app separately on the TV if desired; Android may show its own chooser after a new launcher is installed.
+
+**Clean & launch** and the separate **CleanMyTV Home → Install and use** still follow upstream's handover procedure and can disable Google's launcher. Use **Install local APK…** for installation only. Review cleanup selections before applying them.
 
 ## Before you start: on the TV
 
@@ -201,42 +192,33 @@ npm run home                 # resources/home.apk (without JAVA_HOME/ANDROID_HOM
 npm run dev                  # the app, with hot reload
 npx tsx scripts/fake-tv.ts   # a pretend TV on 127.0.0.1:5556 to try the app without one
 UPSTREAM_DIR=<clone at the pinned commit> npm test
-npm run dist:mac             # dist/*.dmg   (on a Mac)
-npm run dist:win             # dist/*.exe   (on Windows, a Mac, or in CI)
+npm run dist:linux           # dist/*-amd64.deb (Ubuntu / Linux Mint)
 ```
 
 To move to a newer upstream: review its changes, then `node scripts/pin-upstream.mjs <commit sha>`,
 `npm run sync`, and test on a TV. `UPSTREAM_UNPINNED=1` lets `sync` use other content for a local
 trial.
 
-`.github/workflows/build.yml` builds the APK on Linux and runs the tests on every push and pull request.
-Pushes to `main` and version tags also build the macOS and Windows installers; download them from the
-run's **Artifacts**. It runs with read-only repository permissions and actions pinned to commits.
+`.github/workflows/build.yml` runs type checks and tests, builds CleanMyTV Home and packages an amd64 `.deb` on Ubuntu 24.04. Pull requests have read-only permissions. Version tags can create a draft Linux release; existing releases are never overwritten.
 
 ### Releasing
 
-1. Set the new `version` in `package.json` and commit it.
-2. Tag and push: `git tag v0.3.0 && git push origin main v0.3.0`.
-3. The workflow builds both installers and opens a **draft** release with them attached. Check it,
-   then press **Publish release**.
-
-The tag has to match the version in `package.json`, or the release step stops.
+Set `version` in `package.json` and `package-lock.json`, commit, then push a matching `v<version>` tag. Download the `.deb` and checksums from the workflow artifacts or review the draft release and publish it. Manual releases may upload a package built and verified locally from the tagged source.
 
 ## Help and community
 
 - **Chat and how-to questions:** the [CleanMyTV Discord](https://discord.gg/6hZeQkDYf9). Share your
   home screen in `#show-your-setup`.
-- **Bugs and feature requests:** [open a GitHub issue](https://github.com/wingedpanther/cleanmytv/issues/new)
+- **Bugs and feature requests:** [open a GitHub issue](https://github.com/hitttmannn/cleanmytv-linux/issues/new)
   with your TV model, Android version and what happened. Issues are where fixes get tracked, so please
   don't report bugs only in Discord.
 
 ## Known limits
 
-- Tested on a Xiaomi Mi Box S from Windows, and on a TV emulator from macOS.
-- Macs need macOS 13 Ventura or newer. CleanMyTV Home needs Android 9 or newer; Clean up works on older TVs.
-- Wireless debugging pairing uses Google's `adb`, downloaded on demand. On macOS, Local Network
-  privacy can block that binary. If pairing fails there, pair from a Windows PC or run `adb pair`
-  in Terminal once.
+- Linux Mint 22.3 amd64: type check, 71 tests, dependency resolution and startup of the packaged application passed. No physical TV was modified during verification.
+- Ubuntu 24.04 amd64 is the compatible packaging target; older releases and other architectures are not supported by this package.
+- CleanMyTV Home requires Android 9 or newer. Installing FLauncher needs a compatible trusted APK; no FLauncher APK is bundled or downloaded automatically.
+- Standard network ADB uses the built-in TypeScript client. Wireless-debugging pairing prefers `/usr/bin/adb` from APT; the existing on-demand platform-tools fallback remains available.
 
 ## Licence
 
