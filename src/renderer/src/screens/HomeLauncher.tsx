@@ -91,7 +91,7 @@ export function HomeLauncher({ markDone, refreshTvs, status }: ScreenProps): Rea
   }
 
   /** `retry` runs the same step again with the stock launcher the owner picks, when the app can't tell (#39). */
-  async function run(label: string, fn: () => Promise<ApplyResult>, retry?: (stock: string) => Promise<ApplyResult>): Promise<void> {
+  async function run(label: string, fn: () => Promise<ApplyResult>, retry?: (stock: string) => Promise<ApplyResult>, completesHome = true): Promise<void> {
     setBusy(label)
     setResult(null)
     setStockPick(null)
@@ -99,7 +99,7 @@ export function HomeLauncher({ markDone, refreshTvs, status }: ScreenProps): Rea
       const r = await fn()
       setResult(r)
       if (r.stockChoices && retry) setStockPick({ label, choices: r.stockChoices, retry })
-      if (r.ok) markDone('home')
+      if (r.ok && completesHome) markDone('home')
     } catch (e) {
       setResult({ ok: false, summary: errorText(e), warnings: [] })
     } finally {
@@ -131,6 +131,12 @@ export function HomeLauncher({ markDone, refreshTvs, status }: ScreenProps): Rea
         CleanMyTV Home is the TV's new home screen: no ads, your apps, your layout. Install it once, then change anything here;
         the TV shows it straight away and keeps it after a reboot. The stock launcher is one click away on the Overview tab.
       </p>
+      <div className="card white">
+        <h2>FLauncher or another local APK</h2>
+        <p>Choose a trusted APK to install only. Google TV stays enabled and the default Home app is unchanged. Get FLauncher from <a href="https://gitlab.com/flauncher/flauncher" target="_blank" rel="noreferrer">its official project</a>; select the Home app on your TV separately.</p>
+        <p className="small muted">The separate CleanMyTV Home install below and Clean &amp; launch can disable Google TV’s launcher. Use Install local APK for this installation-only path.</p>
+        <button disabled={!!busy} onClick={() => run('Installing APK only', () => window.cytv.installLocalApk(), undefined, false)}>Install local APK…</button>
+      </div>
       <ResultNotice result={result} onDismiss={() => setResult(null)} />
       {stockPick && !busy && (
         <StockPicker
