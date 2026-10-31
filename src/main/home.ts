@@ -9,11 +9,80 @@ import { log } from './log'
 import * as T from './tv'
 import { HOME_PKG, OLD_PKG, StockUnknown, addService, detectStock, dropServices, handOver, rememberStock, toSwitchOff } from './launcher'
 import type { HomeButton, HomeConfig, HomeGroup, HomeStatus, InstallResult, KeyPress, TvApp } from '@shared/api'
+import { classify } from './staros'
 
 const TASK = 'install'
 const MAIN = `${HOME_PKG}/.MainActivity`
 const URI = `content://${HOME_PKG}.config`
 const HEX = /^#[0-9A-Fa-f]{6}$/
+const COMPONENT = /^[A-Za-z_][\w.]*\/[\w.$]+$/
+const starHomeFile = (): string => join(paths.data, 'sberbox-home.json')
+function originalSberBox(): void {
+  const probe = T.getStatus().probe
+  if (!probe || classify(probe) !== 'sberbox-original') throw new Error('This action is for the original SberBox only.')
+}
+
+/** Install only: the stock launcher remains enabled and the HOME preference is untouched. */
+export async function installOnly(): Promise<InstallResult> {
+  originalSberBox()
+  if (!existsSync(paths.bundledHomeApk)) return { ok: false, summary: 'This copy has no CleanMyTV Home APK.', warnings: [] }
+  const tooOld = unsupported()
+  if (tooOld) return { ok: false, summary: tooOld, warnings: [] }
+  const previous = await T.homeAnswer()
+  const tmp = '/data/local/tmp/cmtv-home.apk'
+  try {
+    await T.pushB64(TASK, readFileSync(paths.bundledHomeApk), tmp)
+    const out = await T.sh(TASK, `pm install -r ${tmp}`, { timeoutMs: 300000 })
+    if (!out.includes('Success')) return { ok: false, summary: 'The TV refused the APK.', warnings: [out.trim()] }
+    const current = await T.homeAnswer()
+    return { ok: true, summary: 'CleanMyTV Home is installed. The stock launcher remains enabled; test launch separately.', warnings: current !== previous ? ['Android changed the HOME resolver after installation. Check the Home button on the TV.'] : [] }
+  } finally {
+    await T.sh(TASK, `rm -f ${tmp}`).catch(() => undefined)
+  }
+}
+
+/** Launch without changing HOME; the owner tests real remote keys on the TV. */
+export async function checkOnSberBox(): Promise<InstallResult> {
+  originalSberBox()
+  if (!(await T.packageSets()).installed.has(HOME_PKG)) return { ok: false, summary: 'Install CleanMyTV Home first.', warnings: [] }
+  const out = await T.sh(TASK, `am start -W -n ${MAIN}`)
+  const pid = (await T.tv().shell(`pidof ${HOME_PKG}`)).trim()
+  if (!out.includes('Status: ok') || !/^\d+(?:\s+\d+)*$/.test(pid)) return { ok: false, summary: 'CleanMyTV Home did not stay running.', warnings: [out.trim()] }
+  return { ok: true, summary: 'CleanMyTV Home started. Test the directional, OK, Back and Home buttons on the physical remote; Home may still return to StarOS.', warnings: [] }
+}
+
+/** Uses Android's supported resolver only; never disables the Sber launcher. */
+export async function activateOnSberBox(): Promise<InstallResult> {
+  originalSberBox()
+  const help = await T.tv().shell('cmd package help')
+  if (!help.includes('set-home-activity')) return { ok: false, summary: 'StarOS does not expose Android HOME selection through ADB.', warnings: [] }
+  if (!(await T.homeClaimants()).includes(HOME_PKG)) return { ok: false, summary: 'StarOS does not list CleanMyTV Home as a HOME candidate.', warnings: [] }
+  const previous = await T.homeComponent()
+  if (!previous || !COMPONENT.test(previous)) return { ok: false, summary: 'The current HOME app could not be identified safely.', warnings: [] }
+  mkdirSync(paths.data, { recursive: true, mode: 0o700 })
+  writeFileSync(starHomeFile(), JSON.stringify({ device: T.getStatus().probe?.serial || T.getStatus().probe?.device, previous, at: new Date().toISOString() }), { mode: 0o600 })
+  const out = await T.sh(TASK, `cmd package set-home-activity --user 0 ${MAIN}`).catch((e) => (e as Error).message)
+  const current = await T.homeComponent().catch(() => null)
+  if (current === MAIN) return { ok: true, summary: 'Android now resolves HOME to CleanMyTV Home. Check the physical Home button.', warnings: [] }
+  const restored = await restorePrevious(previous)
+  return { ok: false, summary: 'StarOS did not accept CleanMyTV Home as default HOME.', warnings: [out.trim(), restored ? 'Previous HOME restored.' : `Automatic restore failed. On your computer run: adb shell cmd package set-home-activity --user 0 ${previous}`] }
+}
+
+async function restorePrevious(previous: string): Promise<boolean> {
+  if (!COMPONENT.test(previous)) return false
+  await T.sh(TASK, `cmd package set-home-activity --user 0 ${previous}`).catch(() => '')
+  return (await T.homeComponent().catch(() => null)) === previous
+}
+
+export async function restoreSberBoxHome(): Promise<InstallResult> {
+  originalSberBox()
+  let saved: { device?: string; previous?: string }
+  try { saved = JSON.parse(readFileSync(starHomeFile(), 'utf8')) } catch { return { ok: false, summary: 'No previous HOME record is available.', warnings: [] } }
+  const device = T.getStatus().probe?.serial || T.getStatus().probe?.device
+  if (saved.device !== device || !saved.previous || !COMPONENT.test(saved.previous)) return { ok: false, summary: 'The previous HOME record does not match this device.', warnings: [] }
+  const ok = await restorePrevious(saved.previous)
+  return { ok, summary: ok ? 'Previous HOME restored. CleanMyTV Home remains installed.' : 'StarOS refused to restore the previous HOME.', warnings: ok ? [] : [`On your computer run: adb shell cmd package set-home-activity --user 0 ${saved.previous}`] }
+}
 
 export const DEFAULTS: HomeConfig = {
   layout: 'shelf', sections: ['nowplaying', 'dock', 'rows', 'folders', 'grid'], top_space: 25, quick: ['inputs', 'wifi', 'settings'],

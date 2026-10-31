@@ -1,7 +1,7 @@
 {
   "name": "cleanmytv",
   "productName": "CleanMyTV Linux",
-  "version": "0.3.2-mint.1",
+  "version": "0.3.3-mint.1",
   "description": "Ubuntu and Linux Mint only (amd64): manage Android TV, Google TV and original SberBox over ADB, run diagnostics and install trusted local APKs.",
   "license": "MIT",
   "author": "wingedpanther",
@@ -21,7 +21,8 @@
     "test": "vitest run",
     "sync": "node scripts/sync-upstream.mjs",
     "home": "tsx scripts/build-home.ts",
-    "dist:linux": "electron-vite build && electron-builder --linux deb --x64 --publish never"
+    "dist:linux": "electron-vite build && electron-builder --linux deb --x64 --publish never",
+    "check:deb": "node scripts/check-deb.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

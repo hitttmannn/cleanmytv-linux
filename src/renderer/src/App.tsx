@@ -118,7 +118,7 @@ export default function App(): ReactNode {
   const kind = connected && probe ? classify(probe) : 'other'
   const sber = kind === 'sberbox-original'
   const starosUnknown = kind === 'unknown-staros'
-  const steps = sber ? STEPS.filter((s) => ['setup', 'debloat', 'diagnostics'].includes(s.id)) : starosUnknown ? STEPS.filter((s) => ['setup', 'diagnostics'].includes(s.id)) : STEPS
+  const steps = sber ? STEPS.filter((s) => ['setup', 'debloat', 'diagnostics', 'home'].includes(s.id)) : starosUnknown ? STEPS.filter((s) => ['setup', 'diagnostics'].includes(s.id)) : STEPS
   const current = steps.find((s) => s.id === step) ?? steps[0]
   const currentTv = connected ? tvs.find((t) => t.host === status.host) : undefined
 

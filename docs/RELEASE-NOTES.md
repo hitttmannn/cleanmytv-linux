@@ -1,3 +1,12 @@
+## 0.3.3-mint.1 — Ubuntu / Linux Mint amd64
+
+- Restores CleanMyTV Home on original SberBox: separate APK installation, launch check, confirmed Android HOME selection and rollback. The StarOS launcher stays enabled.
+- Fixes false SberBox restore-record damage when the normal `android` package appears in the snapshot.
+- Packages nine icon sizes and a dedicated window icon for Cinnamon X11; adds a `.deb` contents check. Real Cinnamon window properties are verified separately.
+- Hides unverified remote remapping, widgets and music bars on StarOS while keeping layout, apps and wallpaper editing.
+
+The firmware may refuse a third-party default HOME app. Physical remote buttons and HOME behavior require a real SberBox check.
+
 CleanMyTV Linux 0.3.1-mint.1 targets **Ubuntu 24.04 and Linux Mint 22.x, amd64 only**. Based on wingedpanther/cleanmytv at a764cdc0c399e97ae2dcaba13f4b52c565074b71 (MIT).
 
 - Added an Electron `.deb` build with Mint / Ubuntu dependencies and desktop-menu integration. Linux renderer sandboxing stays enabled.

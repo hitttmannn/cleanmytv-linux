@@ -9,6 +9,8 @@ files:
 extraResources:
   - from: build/icon.png
     to: icon.png
+  - from: build/icons/256x256.png
+    to: window-icon.png
   - from: resources/upstream
     to: upstream
   - from: resources/home.apk
@@ -27,7 +29,7 @@ electronFuses:
   # onlyLoadAppFromAsar stays off: with it the unsigned build exits at launch, and it adds little
   # without code signing and asar integrity checks.
 linux:
-  icon: build/icon.png
+  icon: build/icons
   category: Utility
   syncDesktopName: true
   maintainer: hitttmannn <hitttmannn@users.noreply.github.com>
