@@ -1,3 +1,7 @@
+# Ubuntu and Linux Mint (amd64) edition
+
+This guide is for CleanMyTV Linux only. Install the `.deb` from [this fork’s releases](https://github.com/hitttmannn/cleanmytv-linux/releases). For FLauncher, connect in Setup and choose **Home screen → Install local APK…**. This installs the selected APK without disabling Google TV’s launcher. **Clean & launch** and CleanMyTV Home’s **Install and use** are separate handover flows and may disable Google’s launcher.
+
 # CleanMyTV user guide
 
 A step-by-step guide for TV owners. Written against **v0.2** — screens change, the ideas don't. Every screenshot in the README is labelled with the version it was taken from; expect this guide's pictures to be added the same way as the app settles.
