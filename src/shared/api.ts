@@ -331,6 +331,9 @@ export interface CytvApi {
   applyDebloat(req: DebloatApplyRequest): Promise<ApplyResult>
   restore(listId: string): Promise<ApplyResult>
 
+  /** Install a local APK selected and confirmed in a native dialog, without launcher handover. */
+  installLocalApk(): Promise<ApplyResult>
+
   // CleanMyTV Home
   /** Give Home back to the stock launcher, leaving CleanMyTV Home installed. */
   useStockLauncher(): Promise<ApplyResult>
