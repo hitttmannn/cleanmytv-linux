@@ -8,6 +8,8 @@ import { join, resolve } from 'node:path'
 import { paths } from './paths'
 import { log } from './log'
 import * as T from './tv'
+import * as Sber from './sber-cleanup'
+import { classify, isProtectedPackage } from './staros'
 import type { ApplyResult, DebloatApplyRequest, DebloatEntry, DebloatListSummary, DebloatPlan, PackageState, Probe } from '@shared/api'
 
 const TASK = 'debloat'
@@ -178,6 +180,8 @@ export function matchScore(id: string, header: string[], probe: Pick<Probe, 'mod
 }
 
 export function lists(probe: Probe | undefined): DebloatListSummary[] {
+  if (probe && classify(probe) === 'unknown-staros') return []
+  if (probe && classify(probe) === 'sberbox-original') return [{ id: 'sberbox-original', title: 'SberBox — StarOS / Android 13', score: 10 }]
   const all = upstreamLists().map((l) => ({
     id: l.id,
     title: l.title,
@@ -486,6 +490,11 @@ function savedActive(file: string): string[] {
 export async function plan(listId: string): Promise<DebloatPlan> {
   const probe = T.getStatus().probe
   if (!probe) throw new Error('Connect to a TV first.')
+  if (classify(probe) === 'unknown-staros') throw new Error('Unknown StarOS model: diagnostics only.')
+  if (classify(probe) === 'sberbox-original') {
+    if (listId !== 'sberbox-original') throw new Error('Only the SberBox profile is available on this device.')
+    return Sber.plan()
+  }
   const { title, parsed } = sourceList(listId)
   const { installed, disabled } = await T.packageSets()
   const file = savedListPath(listId, probe)
@@ -537,7 +546,9 @@ export async function tvPackages(): Promise<DebloatEntry[]> {
   const { installed, disabled } = await T.packageSets()
   const common = commonality()
   const skip = new Set([...stockLaunchers(), ...NOT_LAUNCHERS, OUR_HOME, CUSTOM_LAUNCHER, 'android'])
-  return [...installed].filter((p) => !skip.has(p)).sort().map((p) => addedEntry(p, stateOf(p, installed, disabled), common))
+  const probe = T.getStatus().probe
+  if (probe && classify(probe) !== 'other') return []
+  return [...installed].filter((p) => !skip.has(p) && !isProtectedPackage(p, probe)).sort().map((p) => addedEntry(p, stateOf(p, installed, disabled), common))
 }
 
 function writeSavedList(file: string, title: string, header: string[], active: string[], known: ListEntry[]): void {
@@ -567,7 +578,13 @@ function writeSavedList(file: string, title: string, header: string[], active: s
 export async function apply(req: DebloatApplyRequest): Promise<ApplyResult> {
   const probe = T.getStatus().probe
   if (!probe) throw new Error('Connect to a TV first.')
+  if (classify(probe) === 'unknown-staros') throw new Error('Unknown StarOS model: diagnostics only.')
+  if (classify(probe) === 'sberbox-original') {
+    if (req.listId !== 'sberbox-original' || req.enable.length || req.forceHome || req.forceSetupwraith) throw new Error('Only selective SberBox cleanup is supported.')
+    return Sber.apply(req.disable)
+  }
   for (const p of [...req.disable, ...req.enable]) if (!T.PACKAGE_RE.test(p)) throw new Error(`not a package name: ${p}`)
+  for (const p of req.disable) if (isProtectedPackage(p, probe)) throw new Error(`${p} is a protected system package.`)
   const { title, parsed } = sourceList(req.listId)
   const host = T.host()
   const warnings: string[] = []
@@ -648,6 +665,11 @@ async function stockFallback(): Promise<string> {
 export async function restore(listId: string): Promise<ApplyResult> {
   const probe = T.getStatus().probe
   if (!probe) throw new Error('Connect to a TV first.')
+  if (classify(probe) === 'unknown-staros') throw new Error('Unknown StarOS model: diagnostics only.')
+  if (classify(probe) === 'sberbox-original') {
+    if (listId !== 'sberbox-original') throw new Error('Only the SberBox profile is available on this device.')
+    return Sber.restore()
+  }
   const file = savedListPath(listId, probe)
   const { record } = findRecord(file, probe.host, probe.device || undefined)
   const listPkgs = existsSync(file) ? savedActive(file) : sourceList(listId).parsed.entries.filter((e) => e.suggested).map((e) => e.pkg)

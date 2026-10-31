@@ -17,3 +17,13 @@ sudo apt install ./CleanMyTV-0.3.1-mint.1-amd64.deb
 ```
 
 Verify the download with `sha256sum -c SHA256SUMS.txt` from the download directory. Launch **CleanMyTV Linux** from the menu or run `cleanmytv`.
+CleanMyTV Linux 0.3.2-mint.1 adds original SberBox / StarOS support on Ubuntu and Linux Mint amd64.
+
+- Detects the original Android 13 SberBox from device, model and manufacturer properties; unrecognized StarOS models have read-only diagnostics.
+- Adds a selective SberBox cleanup profile, with every candidate unchecked by default and a backend denylist for launchers and system services.
+- Saves a per-operation package snapshot and restores only apps changed by CleanMyTV. Existing TV profiles and restore records retain their behavior.
+- Adds Android TV / Google TV / StarOS diagnostics for RAM, CPU, load, processes and `/data`, with partial results when `/proc` is unavailable.
+- Keeps local APK installation for SberBox without changing HOME. FLauncher behavior and HOME selection require a physical device check.
+- Supplies the app icon to the Electron window so Linux Mint shows the CleanMyTV icon instead of the default gear.
+
+This release is based on a local Linux Mint 22.3 amd64 build with passing TypeScript checks and 80 automated tests. Installation, FLauncher launch and HOME behavior still need a physical SberBox check.

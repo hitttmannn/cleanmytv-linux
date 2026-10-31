@@ -10,11 +10,14 @@ import { Debloat } from './screens/Debloat'
 import { HomeLauncher } from './screens/HomeLauncher'
 import { Extras } from './screens/Extras'
 import { Finish } from './screens/Finish'
+import { Diagnostics } from './screens/Diagnostics'
+import { SberBoxCleanup } from './screens/SberBoxCleanup'
 import { version } from '../../../package.json'
+import { classify } from '../../main/staros'
 
 const REPO_URL = 'https://github.com/hitttmannn/cleanmytv-linux'
 
-export type StepId = 'guided' | 'setup' | 'debloat' | 'home' | 'extras' | 'finish'
+export type StepId = 'guided' | 'setup' | 'debloat' | 'diagnostics' | 'home' | 'extras' | 'finish'
 
 const STEPS: { id: StepId; label: string; sub: string; needsTv: boolean }[] = [
   // The guided one-button run (#9): composes the same IPC the step screens
@@ -22,6 +25,7 @@ const STEPS: { id: StepId; label: string; sub: string; needsTv: boolean }[] = [
   { id: 'guided', label: 'Clean & launch', sub: 'One button, every step', needsTv: true },
   { id: 'setup', label: 'Setup', sub: 'Check and connect', needsTv: false },
   { id: 'debloat', label: 'Clean up', sub: 'Turn off the bloat', needsTv: true },
+  { id: 'diagnostics', label: 'Диагностика', sub: 'CPU, память, процессы', needsTv: true },
   { id: 'home', label: 'Home screen', sub: 'Install and customise', needsTv: true },
   { id: 'extras', label: 'TV extras', sub: 'DNS, animations, remote', needsTv: true },
   { id: 'finish', label: 'Finish', sub: 'Close the debug port', needsTv: false }
@@ -110,15 +114,20 @@ export default function App(): ReactNode {
   const connected = status.state === 'connected'
   const markDone = (s: StepId): void => setDone((prev) => new Set(prev).add(s))
   const props: ScreenProps = { status, go: setStep, markDone, tvs, refreshTvs }
-  const steps = STEPS
-  const current = steps.find((s) => s.id === step) ?? STEPS[1]
+  const probe = status.probe
+  const kind = connected && probe ? classify(probe) : 'other'
+  const sber = kind === 'sberbox-original'
+  const starosUnknown = kind === 'unknown-staros'
+  const steps = sber ? STEPS.filter((s) => ['setup', 'debloat', 'diagnostics'].includes(s.id)) : starosUnknown ? STEPS.filter((s) => ['setup', 'diagnostics'].includes(s.id)) : STEPS
+  const current = steps.find((s) => s.id === step) ?? steps[0]
   const currentTv = connected ? tvs.find((t) => t.host === status.host) : undefined
 
   let screen: ReactNode
   if (current.needsTv && !connected) screen = <NotConnected onGo={() => setStep('setup')} />
   else if (current.id === 'guided') screen = <Guided {...props} />
   else if (current.id === 'setup') screen = <Setup {...props} />
-  else if (current.id === 'debloat') screen = <Debloat {...props} />
+  else if (current.id === 'debloat') screen = sber ? <SberBoxCleanup {...props} /> : <Debloat {...props} />
+  else if (current.id === 'diagnostics') screen = <Diagnostics {...props} />
   else if (current.id === 'home') screen = <HomeLauncher {...props} />
   else if (current.id === 'extras') screen = <Extras {...props} />
   else screen = <Finish {...props} />
@@ -175,7 +184,7 @@ export default function App(): ReactNode {
         </div>
       </aside>
       <main className="main">
-        <div className="content">{screen}</div>
+        <div className="content">{starosUnknown && <div className="notice warn">Обнаружена StarOS, но модель не распознана. Доступна только безопасная диагностика.</div>}{screen}</div>
         <LogDrawer />
       </main>
     </div>
@@ -186,7 +195,7 @@ function ConnPill({ status }: { status: ConnStatus }): ReactNode {
   const p = status.probe
   const [dot, text] =
     status.state === 'connected'
-      ? ['ok', p ? `${p.manufacturer} ${p.model}` : status.host ?? 'Connected']
+      ? ['ok', p ? (classify(p) === 'sberbox-original' ? 'SberBox — StarOS / Android 13' : `${p.manufacturer} ${p.model}`) : status.host ?? 'Connected']
       : status.state === 'connecting'
         ? ['busy', `Connecting to ${status.host ?? 'TV'}`]
         : status.state === 'waiting-auth'

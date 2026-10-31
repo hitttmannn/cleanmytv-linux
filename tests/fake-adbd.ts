@@ -53,6 +53,14 @@ export interface FakeTv {
   sdk?: string
   /** ro.product.manufacturer; Sony when unset. */
   manufacturer?: string
+  model?: string
+  device?: string
+  release?: string
+  build?: string
+  hardware?: string
+  serial?: string
+  procDenied?: boolean
+  disableFails?: string[]
   /** CleanMyTV Home's versionName once installed; 1.0.0 when unset. */
   homeVersion?: string
   /** Packages that never stay running (pidof finds nothing), like a launcher crashing at boot. */
@@ -75,10 +83,18 @@ function sh(tv: FakeTv, cmd: string): string {
   tv.commands.push(cmd)
   let m: RegExpExecArray | null
   if (cmd.startsWith('getprop')) {
-    const props: Record<string, string> = { 'ro.product.model': 'BRAVIA 4K VH2', 'ro.product.device': 'BRAVIA_VH2', 'ro.product.name': 'BRAVIA_VH2_EU', 'ro.product.manufacturer': tv.manufacturer ?? 'Sony', 'ro.build.version.release': tv.sdk === '24' ? '7.0' : '12', 'ro.build.version.sdk': tv.sdk ?? '31', 'sys.boot_completed': '1', 'ro.build.display.id': 'TEST', 'ro.adb.secure': tv.adbSecure }
+    const props: Record<string, string> = { 'ro.product.model': tv.model ?? 'BRAVIA 4K VH2', 'ro.product.device': tv.device ?? 'BRAVIA_VH2', 'ro.product.name': 'BRAVIA_VH2_EU', 'ro.product.manufacturer': tv.manufacturer ?? 'Sony', 'ro.build.version.release': tv.release ?? (tv.sdk === '24' ? '7.0' : '12'), 'ro.build.version.sdk': tv.sdk ?? '31', 'sys.boot_completed': '1', 'ro.build.display.id': tv.build ?? 'TEST', 'ro.adb.secure': tv.adbSecure, 'ro.hardware': tv.hardware ?? 'amlogic', 'ro.serialno': tv.serial ?? 'FAKE123' }
     return cmd.split(';').map((c) => props[c.trim().split(' ')[1]] ?? '').join('\n') + '\n'
   }
   if (cmd === 'pm list packages') return [...tv.packages.keys()].map((p) => `package:${p}`).join('\n') + '\n'
+  if (cmd.startsWith('cat /proc/')) {
+    if (tv.procDenied) return 'Permission denied\n'
+    if (cmd === 'cat /proc/meminfo') return 'MemTotal: 2038784 kB\nMemAvailable: 766976 kB\nMemFree: 102400 kB\nSwapTotal: 0 kB\n'
+    if (cmd === 'cat /proc/loadavg') return '2.52 4.78 3.39 1/300 99\n'
+    if (cmd === 'cat /proc/stat') return `cpu  ${Date.now()} 0 100 900 0 0 0 0\n`
+  }
+  if (cmd === 'top -b -n 1 -m 8') return 'PID USER %CPU ARGS\n123 shell 10.0 top\n'
+  if (cmd === 'df -h /data') return 'Filesystem Size Used Avail Use% Mounted on\n/data 8G 4G 4G 50% /data\n'
   if (cmd === 'pm list packages -d') return [...tv.packages].filter(([, s]) => s === 'disabled').map(([p]) => `package:${p}`).join('\n') + '\n'
   if (cmd.startsWith('cmd package resolve-activity')) return `priority=0 preferredOrder=0\n${tv.home}\n`
   if (cmd.includes('LEANBACK_LAUNCHER')) return tv.leanback.map((p) => `  ${p}/.Main`).join('\n') + '\n'
@@ -90,6 +106,7 @@ function sh(tv: FakeTv, cmd: string): string {
   if ((m = /^settings get global (\S+)$/.exec(cmd))) return (tv.settings.get(m[1]) ?? 'null') + '\n'
   if ((m = /^pm disable-user --user 0 (\S+)$/.exec(cmd))) {
     if (!tv.packages.has(m[1])) return `Error: Unknown package: ${m[1]}\n`
+    if (tv.disableFails?.includes(m[1])) return `Error: Operation not allowed: ${m[1]}\n`
     tv.packages.set(m[1], 'disabled'); return `Package ${m[1]} new state: disabled-user\n`
   }
   if ((m = /^pm enable (?:--user 0 )?(\S+)$/.exec(cmd))) {

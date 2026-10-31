@@ -132,6 +132,7 @@ export function installMock(): void {
 
   const api: CytvApi = {
     platform: 'darwin',
+    async diagnostics() { return { at: new Date().toISOString(), model: probe.model, android: probe.release, build: probe.build, platform: 'mock', warnings: [] } },
     async scan() {
       await wait(1200)
       return [{ host: '192.168.1.50' }, { host: '192.168.1.73' }]
