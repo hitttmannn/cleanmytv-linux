@@ -74,13 +74,13 @@ export default function App(): ReactNode {
     window.cytv.knownTvs().then(async (list) => {
       setTvs(list)
       const tv = list.find((t) => t.host === host)
-      if (!tv || (tv.thumb && Date.now() - (tv.thumbAt ?? 0) < THUMB_MAX_AGE)) return
+      if (!tv || (tv.thumb && Date.now() - (tv.thumbAt ?? 0) < THUMB_MAX_AGE) || (status.probe && classify(status.probe) !== 'other')) return
       const shot = await window.cytv.screenshot().catch(() => null)
       if (!shot || stale) return
       setTvs(await window.cytv.saveTvThumb(host, await thumbnail(shot)))
     }).catch(() => null)
     return () => { stale = true }
-  }, [status.state, status.host])
+  }, [status.state, status.host, status.probe])
 
   // Checked again on every step change, so the note goes once the Home screen step has updated the TV.
   useEffect(() => {
@@ -118,7 +118,7 @@ export default function App(): ReactNode {
   const kind = connected && probe ? classify(probe) : 'other'
   const sber = kind === 'sberbox-original'
   const starosUnknown = kind === 'unknown-staros'
-  const steps = sber ? STEPS.filter((s) => ['setup', 'debloat', 'diagnostics'].includes(s.id)) : starosUnknown ? STEPS.filter((s) => ['setup', 'diagnostics'].includes(s.id)) : STEPS
+  const steps = sber ? STEPS.filter((s) => ['setup', 'debloat', 'diagnostics', 'home'].includes(s.id)) : starosUnknown ? STEPS.filter((s) => ['setup', 'diagnostics'].includes(s.id)) : STEPS
   const current = steps.find((s) => s.id === step) ?? steps[0]
   const currentTv = connected ? tvs.find((t) => t.host === status.host) : undefined
 

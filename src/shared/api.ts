@@ -365,6 +365,10 @@ export interface CytvApi {
   /** Installs or updates CleanMyTV Home and makes it Home, putting the old Home back if that fails. */
   /** `stock`: the TV's own launcher, when the owner picked it. */
   installHome(stock?: string): Promise<InstallResult>
+  installSberBoxHome(): Promise<InstallResult>
+  checkSberBoxHome(): Promise<InstallResult>
+  activateSberBoxHome(): Promise<InstallResult>
+  restoreSberBoxHome(): Promise<InstallResult>
   /** Make the installed CleanMyTV Home the Home screen. */
   useHome(stock?: string): Promise<ApplyResult>
   /** The apps CleanMyTV Home shows, named as on the TV. */

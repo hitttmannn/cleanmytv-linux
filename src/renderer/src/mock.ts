@@ -276,6 +276,10 @@ export function installMock(): void {
       launcherHome = false
       return ok('CleanMyTV Home is Home now. Press Home on the remote to see it.')
     },
+    async installSberBoxHome() { homeInstalled = true; return ok('CleanMyTV Home installed; HOME unchanged.') },
+    async checkSberBoxHome() { return ok('CleanMyTV Home started; check the physical remote.') },
+    async activateSberBoxHome() { homeIsHome = true; return ok('HOME selected.') },
+    async restoreSberBoxHome() { homeIsHome = false; return ok('Previous HOME restored.') },
     async useHome() {
       await wait(600)
       homeIsHome = true

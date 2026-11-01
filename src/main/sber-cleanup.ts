@@ -29,7 +29,7 @@ function read(p: Probe): Journal | null {
   const allowed = new Set(SBER_CANDIDATES.map((c) => c.pkg))
   for (const op of j.operations) {
     if (typeof op.at !== 'string' || !Array.isArray(op.installed) || !Array.isArray(op.disabled) || !Array.isArray(op.requested) || !Array.isArray(op.changed) ||
-      [...op.installed, ...op.disabled].some((pkg) => typeof pkg !== 'string' || !T.PACKAGE_RE.test(pkg)) ||
+      [...op.installed, ...op.disabled].some((pkg) => typeof pkg !== 'string' || (pkg !== 'android' && !T.PACKAGE_RE.test(pkg))) ||
       [...op.requested, ...op.changed].some((pkg) => typeof pkg !== 'string' || !allowed.has(pkg) || isProtectedPackage(pkg, p)))
       throw new Error('SberBox restore record is damaged. No changes made.')
   }

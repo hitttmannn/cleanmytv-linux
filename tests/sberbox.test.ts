@@ -6,6 +6,7 @@ import { configurePaths } from '../src/main/paths'
 import { classify, isProtectedPackage } from '../src/main/staros'
 import * as D from '../src/main/debloat'
 import * as T from '../src/main/tv'
+import * as H from '../src/main/home'
 import { measure, parseMemory, cpuUsage } from '../src/main/diagnostics'
 import { newTv, startFakeAdbd, type FakeTv } from './fake-adbd'
 import type { Server } from 'node:net'
@@ -39,8 +40,9 @@ describe('StarOS detection and guards', () => {
 describe('SberBox with fake ADB', () => {
   let tv: FakeTv, server: Server, port: number
   beforeAll(async () => {
-    tv = newTv(); tv.model = probe.model; tv.device = probe.device; tv.manufacturer = probe.manufacturer; tv.release = '13'; tv.build = probe.build; tv.sdk = '33'
+    tv = newTv(); tv.maxData = 256 * 1024; tv.model = probe.model; tv.device = probe.device; tv.manufacturer = probe.manufacturer; tv.release = '13'; tv.build = probe.build; tv.sdk = '33'
     for (const p of ['com.estrongs.android.pop', 'com.apkpure.aegon', 'ru.sberdevices.survey', 'ru.sberdevices.starlauncher']) tv.packages.set(p, 'enabled')
+    tv.packages.set('android', 'enabled')
     tv.packages.set('ru.sberdevices.music', 'disabled')
     ;({ server, port } = await startFakeAdbd(tv))
     T.init(join(home, 'data', 'adbkey'), () => {})
@@ -73,6 +75,27 @@ describe('SberBox with fake ADB', () => {
     const r = await D.apply({ listId: 'sberbox-original', disable: ['com.apkpure.aegon'], enable: [] })
     expect(r.ok).toBe(false); expect(r.warnings[0]).toMatch(/com.apkpure.aegon/)
     expect(tv.packages.get('com.apkpure.aegon')).toBe('enabled')
+  })
+  it('installs and launches Home without changing the Sber launcher or HOME choice', async () => {
+    tv.home = 'ru.sberdevices.starlauncher/.MainActivity'
+    tv.homeClaims = [tv.home]
+    const before = tv.commands.length
+    expect((await H.installOnly()).ok).toBe(true)
+    expect(tv.home).toBe('ru.sberdevices.starlauncher/.MainActivity')
+    expect(tv.packages.get('ru.sberdevices.starlauncher')).toBe('enabled')
+    expect(tv.commands.slice(before).some((c) => c.includes('disable-user') || c.includes('set-home-activity'))).toBe(false)
+    expect((await H.checkOnSberBox()).ok).toBe(true)
+  })
+  it('reports a rejected HOME change and keeps the saved stock choice', async () => {
+    tv.homeStuck = true
+    const failed = await H.activateOnSberBox()
+    expect(failed.ok).toBe(false)
+    expect(tv.home).toBe('ru.sberdevices.starlauncher/.MainActivity')
+    expect(tv.packages.get('ru.sberdevices.starlauncher')).toBe('enabled')
+    tv.homeStuck = false
+    expect((await H.activateOnSberBox()).ok).toBe(true)
+    expect((await H.restoreSberBoxHome()).ok).toBe(true)
+    expect(tv.home).toBe('ru.sberdevices.starlauncher/.MainActivity')
   })
   it('keeps partial diagnostics when /proc is inaccessible', async () => {
     tv.procDenied = true

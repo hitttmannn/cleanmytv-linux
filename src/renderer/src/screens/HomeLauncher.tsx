@@ -7,6 +7,7 @@ import { Busy, Confirm, ResultNotice, Slider, StatusChip, Toggle, errorText } fr
 import { prepareWallpaper, thumbnail } from '../lib/image'
 import { fetchBingDaily } from '../lib/backgrounds'
 import { findPlaces, type Place } from '../lib/places'
+import { classify } from '../../../main/staros'
 
 type Tab = 'overview' | 'apps' | 'layout' | 'look' | 'widgets' | 'music' | 'buttons'
 
@@ -40,6 +41,8 @@ export function HomeLauncher({ markDone, refreshTvs, status }: ScreenProps): Rea
   const [result, setResult] = useState<ApplyResult | null>(null)
   const [saving, setSaving] = useState(false)
   const [askStock, setAskStock] = useState(false)
+  const [askActivate, setAskActivate] = useState(false)
+  const sber = !!status.probe && classify(status.probe) === 'sberbox-original'
   const [stockPick, setStockPick] = useState<StockPick | null>(null)
   const pending = useRef<Partial<HomeConfig>>({})
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -128,13 +131,14 @@ export function HomeLauncher({ markDone, refreshTvs, status }: ScreenProps): Rea
     <>
       <h1>Home screen</h1>
       <p className="lede">
+        {sber ? 'Install and test CleanMyTV Home without changing the StarOS launcher. Layout, apps and wallpaper can be edited from this computer after installation.' : <>
         CleanMyTV Home is the TV's new home screen: no ads, your apps, your layout. Install it once, then change anything here;
-        the TV shows it straight away and keeps it after a reboot. The stock launcher is one click away on the Overview tab.
+        the TV shows it straight away and keeps it after a reboot. The stock launcher is one click away on the Overview tab.</>}
       </p>
       <div className="card white">
         <h2>FLauncher or another local APK</h2>
-        <p>Choose a trusted APK to install only. Google TV stays enabled and the default Home app is unchanged. Get FLauncher from <a href="https://gitlab.com/flauncher/flauncher" target="_blank" rel="noreferrer">its official project</a>; select the Home app on your TV separately.</p>
-        <p className="small muted">The separate CleanMyTV Home install below and Clean &amp; launch can disable Google TV’s launcher. Use Install local APK for this installation-only path.</p>
+        <p>Choose a trusted APK to install only. {sber ? 'The StarOS launcher stays enabled' : 'Google TV stays enabled'} and the default Home app is unchanged. Get FLauncher from <a href="https://gitlab.com/flauncher/flauncher" target="_blank" rel="noreferrer">its official project</a>; select the Home app on your TV separately.</p>
+        {!sber && <p className="small muted">The separate CleanMyTV Home install below and Clean &amp; launch can disable Google TV’s launcher. Use Install local APK for this installation-only path.</p>}
         <button disabled={!!busy} onClick={() => run('Installing APK only', () => window.cytv.installLocalApk(), undefined, false)}>Install local APK…</button>
       </div>
       <ResultNotice result={result} onDismiss={() => setResult(null)} />
@@ -156,7 +160,7 @@ export function HomeLauncher({ markDone, refreshTvs, status }: ScreenProps): Rea
       ) : (
         <>
           <div className="tabs" role="tablist">
-            {TABS.map(([id, label]) => (
+            {TABS.filter(([id]) => !sber || !['widgets', 'music', 'buttons'].includes(id)).map(([id, label]) => (
               <button key={id} role="tab" aria-selected={tab === id} className={tab === id ? 'on' : ''} disabled={id !== 'overview' && !ready} onClick={() => setTab(id)}>
                 {label}
               </button>
@@ -170,7 +174,7 @@ export function HomeLauncher({ markDone, refreshTvs, status }: ScreenProps): Rea
             </div>
           )}
           {tab === 'overview' && (
-            <Overview home={home} busy={!!busy} run={run} askStock={() => setAskStock(true)} host={status.host} onShot={refreshTvs} />
+            sber ? <SberOverview home={home} busy={!!busy} run={run} askActivate={() => setAskActivate(true)} /> : <Overview home={home} busy={!!busy} run={run} askStock={() => setAskStock(true)} host={status.host} onShot={refreshTvs} />
           )}
           {ready && tab === 'apps' && apps && <AppsTab apps={apps} cfg={cfg} set={set} />}
           {ready && tab === 'layout' && apps && <LayoutTab apps={apps} cfg={cfg} set={set} />}
@@ -195,8 +199,24 @@ export function HomeLauncher({ markDone, refreshTvs, status }: ScreenProps): Rea
           <p>The app switches the TV's own launcher back on and makes it Home. CleanMyTV Home stays installed, so you can switch again.</p>
         </Confirm>
       )}
+      {askActivate && <Confirm title="Make CleanMyTV Home the default?" confirmLabel="Try Android HOME selection" onConfirm={() => { setAskActivate(false); run('Asking StarOS to select HOME', () => window.cytv.activateSberBoxHome()) }} onCancel={() => setAskActivate(false)}><p>StarOS may refuse. The current HOME choice will be saved and restored on failure. The Sber launcher stays enabled.</p></Confirm>}
     </>
   )
+}
+
+function SberOverview({ home, busy, run, askActivate }: { home: HomeStatus; busy: boolean; run: (label: string, fn: () => Promise<ApplyResult>) => Promise<void>; askActivate: () => void }): ReactNode {
+  return <div className="card white">
+    <h2>CleanMyTV Home on SberBox</h2>
+    <p>{home.installed ? `Installed: ${home.versionName ?? 'version unknown'}` : 'Not installed'}. {home.isHome ? 'Selected as HOME.' : 'StarOS remains HOME.'}</p>
+    {home.unsupported && <div className="notice warn">{home.unsupported}</div>}
+    <div className="row">
+      <button className="btn primary" disabled={busy || !home.bundled || !!home.unsupported} onClick={() => run('Installing CleanMyTV Home only', () => window.cytv.installSberBoxHome())}>{home.installed ? 'Update APK only' : 'Install APK only'}</button>
+      <button disabled={busy || !home.installed} onClick={() => run('Launching CleanMyTV Home', () => window.cytv.checkSberBoxHome())}>Launch and check</button>
+      <button disabled={busy || !home.installed} onClick={askActivate}>Try setting default HOME…</button>
+      <button disabled={busy} onClick={() => run('Restoring previous HOME', () => window.cytv.restoreSberBoxHome())}>Restore previous HOME</button>
+    </div>
+    <p className="small muted">After launch, test directional, OK, Back and Home buttons on the physical remote. StarOS may reserve some buttons or refuse a different default launcher. Remote remapping, widgets and music bars are hidden until compatibility is verified.</p>
+  </div>
 }
 
 interface StockPick {

@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session, shell, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, session, shell, dialog, nativeImage } from 'electron'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
@@ -155,6 +155,10 @@ const handlers: Omit<Handlers, 'onLog' | 'onProgress' | 'onStatus'> = {
   removeOldLauncher: () => launcher.removeOld(),
   homeStatus: () => home.status(),
   installHome: (stock) => home.install(typeof stock === 'string' ? stock : undefined),
+  installSberBoxHome: () => home.installOnly(),
+  checkSberBoxHome: () => home.checkOnSberBox(),
+  activateSberBoxHome: () => home.activateOnSberBox(),
+  restoreSberBoxHome: () => home.restoreSberBoxHome(),
   useHome: async (stock) => {
     const st = await home.status()
     if (!st.installed) return { ok: false, summary: 'CleanMyTV Home is not installed yet.', warnings: [] }
@@ -191,17 +195,19 @@ function isAppUrl(url: string | undefined): boolean {
 }
 
 function createWindow(): void {
+  const icon = nativeImage.createFromPath(app.isPackaged ? join(process.resourcesPath, 'window-icon.png') : join(app.getAppPath(), 'build/icons/256x256.png'))
   win = new BrowserWindow({
     width: 1240,
     height: 820,
     minWidth: 960,
     minHeight: 640,
     title: 'CleanMyTV Linux — Ubuntu / Linux Mint',
-    icon: app.isPackaged ? join(process.resourcesPath, 'icon.png') : join(app.getAppPath(), 'build/icon.png'),
+    icon,
     backgroundColor: '#FFFFFF',
     show: false,
     webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: true, contextIsolation: true, nodeIntegration: false, webviewTag: false }
   })
+  win.setIcon(icon)
   // Nothing in the app navigates; links open in the system browser instead (below).
   win.webContents.on('will-navigate', (e, url) => { if (!isAppUrl(url)) e.preventDefault() })
   win.webContents.on('will-redirect', (e, url) => { if (!isAppUrl(url)) e.preventDefault() })
@@ -217,6 +223,7 @@ function createWindow(): void {
 
 // One copy at a time: two would race on the key file and on the same TV connection.
 const primary = app.requestSingleInstanceLock()
+app.setName('cleanmytv')
 if (!primary) app.quit()
 app.on('second-instance', () => {
   if (win) { if (win.isMinimized()) win.restore(); win.focus() }
@@ -237,7 +244,7 @@ app.whenReady().then(() => {
         const probe = T.getStatus().probe
         if (probe && classify(probe) !== 'other') {
           const safe = new Set(['scan', 'connect', 'disconnect', 'status', 'lastHost', 'reconnect', 'checkAdbClosed', 'checkUpdate', 'checks', 'knownTvs', 'connectKnown', 'forgetTv', 'diagnostics', 'lists', 'plan', 'tvPackages', 'applyDebloat', 'restore'])
-          if (classify(probe) === 'sberbox-original') safe.add('installLocalApk')
+          if (classify(probe) === 'sberbox-original') for (const action of ['installLocalApk', 'homeStatus', 'installSberBoxHome', 'checkSberBoxHome', 'activateSberBoxHome', 'restoreSberBoxHome', 'homeApps', 'readHomeConfig', 'setHomeConfig', 'setHomeWallpaper', 'homeKeys']) safe.add(action)
           if (!safe.has(name)) throw new Error('This StarOS device supports diagnostics and selective cleanup only.')
         }
         return await (fn as (...a: unknown[]) => Promise<unknown>)(...args)
