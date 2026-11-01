@@ -6,7 +6,9 @@ const methods = [
   'scan', 'connect', 'disconnect', 'status', 'lastHost', 'reconnect', 'checkAdbClosed', 'bootCheck', 'checkUpdate', 'pair',
   'checks', 'download', 'installLocalApk',
   'lists', 'plan', 'tvPackages', 'applyDebloat', 'restore', 'diagnostics',
-  'useStockLauncher', 'removeOldLauncher', 'homeStatus', 'installHome', 'useHome', 'homeApps', 'readHomeConfig', 'setRemoteButtons', 'homeKeys', 'setHomeConfig', 'setHomeWallpaper',
+  'useStockLauncher', 'removeOldLauncher', 'homeStatus', 'installHome', 'useHome',
+  'installSberBoxHome', 'checkSberBoxHome', 'activateSberBoxHome', 'restoreSberBoxHome',
+  'homeApps', 'readHomeConfig', 'setRemoteButtons', 'homeKeys', 'setHomeConfig', 'setHomeWallpaper',
   'knownTvs', 'connectKnown', 'forgetTv', 'saveTvThumb',
   'screenshot', 'webGet',
   'systemState', 'setPrivateDns', 'setAnimationScale', 'key', 'reboot'

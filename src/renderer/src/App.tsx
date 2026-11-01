@@ -74,13 +74,13 @@ export default function App(): ReactNode {
     window.cytv.knownTvs().then(async (list) => {
       setTvs(list)
       const tv = list.find((t) => t.host === host)
-      if (!tv || (tv.thumb && Date.now() - (tv.thumbAt ?? 0) < THUMB_MAX_AGE)) return
+      if (!tv || (tv.thumb && Date.now() - (tv.thumbAt ?? 0) < THUMB_MAX_AGE) || (status.probe && classify(status.probe) !== 'other')) return
       const shot = await window.cytv.screenshot().catch(() => null)
       if (!shot || stale) return
       setTvs(await window.cytv.saveTvThumb(host, await thumbnail(shot)))
     }).catch(() => null)
     return () => { stale = true }
-  }, [status.state, status.host])
+  }, [status.state, status.host, status.probe])
 
   // Checked again on every step change, so the note goes once the Home screen step has updated the TV.
   useEffect(() => {

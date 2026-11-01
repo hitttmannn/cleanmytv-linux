@@ -1,3 +1,11 @@
+## 0.3.4-mint.1 — Ubuntu / Linux Mint amd64
+
+- Fixes **Install APK only** on SberBox by exposing the four SberBox Home actions through Electron's preload bridge. A regression test checks the bridge.
+- Prevents automatic screenshot attempts on StarOS devices, which produced misleading diagnostic-only messages in the activity log.
+- Clarifies that local APK installation on SberBox leaves the StarOS launcher enabled and does not change the default HOME app.
+
+The packaged CleanMyTV Home APK installation and launcher selection still need testing on a physical SberBox. Firmware may refuse a third-party default HOME app; the stock launcher is never disabled by this flow.
+
 ## 0.3.3-mint.1 — Ubuntu / Linux Mint amd64
 
 - Restores CleanMyTV Home on original SberBox: separate APK installation, launch check, confirmed Android HOME selection and rollback. The StarOS launcher stays enabled.

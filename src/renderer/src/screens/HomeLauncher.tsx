@@ -137,7 +137,7 @@ export function HomeLauncher({ markDone, refreshTvs, status }: ScreenProps): Rea
       </p>
       <div className="card white">
         <h2>FLauncher or another local APK</h2>
-        <p>Choose a trusted APK to install only. Google TV stays enabled and the default Home app is unchanged. Get FLauncher from <a href="https://gitlab.com/flauncher/flauncher" target="_blank" rel="noreferrer">its official project</a>; select the Home app on your TV separately.</p>
+        <p>Choose a trusted APK to install only. {sber ? 'The StarOS launcher stays enabled' : 'Google TV stays enabled'} and the default Home app is unchanged. Get FLauncher from <a href="https://gitlab.com/flauncher/flauncher" target="_blank" rel="noreferrer">its official project</a>; select the Home app on your TV separately.</p>
         {!sber && <p className="small muted">The separate CleanMyTV Home install below and Clean &amp; launch can disable Google TV’s launcher. Use Install local APK for this installation-only path.</p>}
         <button disabled={!!busy} onClick={() => run('Installing APK only', () => window.cytv.installLocalApk(), undefined, false)}>Install local APK…</button>
       </div>
